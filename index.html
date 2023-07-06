@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TO-DO App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="Style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="add">
+            <input type="text" placeholder="Add A Task">
+            <button>Add</button>
+        </div>
+        <ol class="notConpleted">
+            <h3>Not Completed</h3>
+
+        </ol>
+        <ol class="Conpleted">
+            <h3>Completed</h3>
+
+        </ol>
+
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+
+    <script src="app.js"></script>
+
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js";
+        import { getDatabase, ref, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+            apiKey: "AIzaSyA2x6hE6WwhjFSUJ18dEwkrXhO6Zlj53z0",
+            authDomain: "todo-app-with-database-dceca.firebaseapp.com",
+            databaseURL: "https://todo-app-with-database-dceca-default-rtdb.firebaseio.com",
+            projectId: "todo-app-with-database-dceca",
+            storageBucket: "todo-app-with-database-dceca.appspot.com",
+            messagingSenderId: "995423941719",
+            appId: "1:995423941719:web:1d2b11030d5fb95bd6df12",
+            measurementId: "G-2XFL9J8M5C"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getDatabase();
+
+        const input = document.querySelector('input');
+        const btn = document.querySelector('.add > button');
+        const notConpleted = document.querySelector('.notConpleted');
+        const Conpleted = document.querySelector('.Conpleted');
+
+        btn.addEventListener('click', addList);
+        input.addEventListener('keyup', (e) => {
+            (e.key === 'Enter' ? addList(e) : null);
+        });
+
+        function addList(e) {
+            const newTask = input.value.trim();
+            if (newTask !== '') {
+                const tasksRef = ref(db, "tasks");
+                const newTaskRef = push(tasksRef);
+                update(newTaskRef, {
+                    task: newTask,
+                    completed: false
+                }).catch((error) => {
+                    console.error("Error adding task: ", error);
+                });
+                input.value = '';
+            }
+        }
+
+        function createTaskElement(taskId, taskData) {
+            const { task, completed } = taskData;
+
+            const newLi = document.createElement('li');
+            const checkBtn = document.createElement('button');
+            const delBtn = document.createElement('button');
+
+            checkBtn.innerHTML = '<i class="fa fa-check"></i>';
+            delBtn.innerHTML = '<i class="fa fa-trash"></i>';
+
+            newLi.textContent = task;
+            newLi.setAttribute('data-key', taskId);
+            if (completed) {
+                Conpleted.appendChild(newLi);
+                checkBtn.style.display = 'none';
+            } else {
+                notConpleted.appendChild(newLi);
+            }
+            newLi.appendChild(checkBtn);
+            newLi.appendChild(delBtn);
+
+            checkBtn.addEventListener('click', () => {
+                updateTaskCompletion(taskId, true);
+            });
+
+            delBtn.addEventListener('click', () => {
+                deleteTask(taskId);
+            });
+        }
+
+        function updateTaskCompletion(taskId, completed) {
+            const taskRef = ref(db, "tasks/" + taskId);
+
+            update(taskRef, {
+                completed: completed
+            }).catch((error) => {
+                console.error("Error updating task: ", error);
+            });
+        }
+
+        function deleteTask(taskId) {
+            const taskRef = ref(db, "tasks/" + taskId);
+
+            remove(taskRef).catch((error) => {
+                console.error("Error deleting task: ", error);
+            });
+        }
+
+        // Listen for realtime updates
+        onValue(ref(db, "tasks"), (snapshot) => {
+            notConpleted.innerHTML = '';
+            Conpleted.innerHTML = '';
+            snapshot.forEach((childSnapshot) => {
+                const taskKey = childSnapshot.key;
+                const taskData = childSnapshot.val();
+                createTaskElement(taskKey, taskData);
+            });
+        });
+    </script>
+</body>
+
+</html>
